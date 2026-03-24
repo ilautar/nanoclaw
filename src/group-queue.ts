@@ -166,6 +166,9 @@ export class GroupQueue {
     const inputDir = path.join(DATA_DIR, 'ipc', state.groupFolder, 'input');
     try {
       fs.mkdirSync(inputDir, { recursive: true });
+      // Container runs as non-root (uid=1000), so the dir needs to be world-writable
+      // for the container to delete processed files.
+      try { fs.chmodSync(inputDir, 0o777); } catch { /* ignore */ }
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}.json`;
       const filepath = path.join(inputDir, filename);
       const tempPath = `${filepath}.tmp`;
@@ -187,6 +190,7 @@ export class GroupQueue {
     const inputDir = path.join(DATA_DIR, 'ipc', state.groupFolder, 'input');
     try {
       fs.mkdirSync(inputDir, { recursive: true });
+      try { fs.chmodSync(inputDir, 0o777); } catch { /* ignore */ }
       fs.writeFileSync(path.join(inputDir, '_close'), '');
     } catch {
       // ignore

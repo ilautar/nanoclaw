@@ -331,6 +331,16 @@ async function runAgent(
     }
 
     if (output.status === 'error') {
+      // If the session is stale (Claude no longer has it), clear it so the
+      // next attempt starts a fresh conversation instead of looping forever.
+      if (output.error?.includes('No conversation found with session ID')) {
+        logger.warn(
+          { group: group.name },
+          'Stale session detected, clearing for fresh start',
+        );
+        sessions[group.folder] = '';
+        setSession(group.folder, '');
+      }
       logger.error(
         { group: group.name, error: output.error },
         'Container agent error',
