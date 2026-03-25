@@ -63,6 +63,12 @@ function buildVolumeMounts(
   const mounts: VolumeMount[] = [];
   const projectRoot = process.cwd();
   const groupDir = resolveGroupFolderPath(group.folder);
+  fs.mkdirSync(groupDir, { recursive: true });
+  try {
+    fs.chmodSync(groupDir, 0o777);
+  } catch {
+    /* ignore */
+  }
 
   if (isMain) {
     // Main gets the project root read-only. Writable paths the agent needs
@@ -105,6 +111,11 @@ function buildVolumeMounts(
   // Global memory directory (writable for all groups)
   const globalDir = path.join(GROUPS_DIR, 'global');
   fs.mkdirSync(globalDir, { recursive: true });
+  try {
+    fs.chmodSync(globalDir, 0o777);
+  } catch {
+    /* ignore */
+  }
   mounts.push({
     hostPath: globalDir,
     containerPath: '/workspace/global',
