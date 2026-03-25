@@ -100,18 +100,16 @@ function buildVolumeMounts(
       containerPath: '/workspace/group',
       readonly: false,
     });
-
-    // Global memory directory (read-only for non-main)
-    // Only directory mounts are supported, not file mounts
-    const globalDir = path.join(GROUPS_DIR, 'global');
-    if (fs.existsSync(globalDir)) {
-      mounts.push({
-        hostPath: globalDir,
-        containerPath: '/workspace/global',
-        readonly: true,
-      });
-    }
   }
+
+  // Global memory directory (writable for all groups)
+  const globalDir = path.join(GROUPS_DIR, 'global');
+  fs.mkdirSync(globalDir, { recursive: true });
+  mounts.push({
+    hostPath: globalDir,
+    containerPath: '/workspace/global',
+    readonly: false,
+  });
 
   // Per-group Claude sessions directory (isolated from other groups)
   // Each group gets their own .claude/ to prevent cross-group session access
@@ -124,13 +122,21 @@ function buildVolumeMounts(
   fs.mkdirSync(groupSessionsDir, { recursive: true });
   // Allow container user (node, uid 1000) to create subdirectories
   // (e.g. session-env for agent-browser) even when host runs as root
-  try { fs.chmodSync(groupSessionsDir, 0o777); } catch { /* ignore */ }
+  try {
+    fs.chmodSync(groupSessionsDir, 0o777);
+  } catch {
+    /* ignore */
+  }
   // Pre-create session-env so the Claude Code SDK can initialize before
   // running any tool (even whoami). Without this the container fails on
   // startup when the host process owns the directory as root.
   const sessionEnvDir = path.join(groupSessionsDir, 'session-env');
   fs.mkdirSync(sessionEnvDir, { recursive: true });
-  try { fs.chmodSync(sessionEnvDir, 0o777); } catch { /* ignore */ }
+  try {
+    fs.chmodSync(sessionEnvDir, 0o777);
+  } catch {
+    /* ignore */
+  }
   const settingsFile = path.join(groupSessionsDir, 'settings.json');
   if (!fs.existsSync(settingsFile)) {
     fs.writeFileSync(
@@ -180,7 +186,11 @@ function buildVolumeMounts(
   const inputDir = path.join(groupIpcDir, 'input');
   fs.mkdirSync(inputDir, { recursive: true });
   // Container runs as non-root (uid=1000) and needs to delete processed files
-  try { fs.chmodSync(inputDir, 0o777); } catch { /* ignore */ }
+  try {
+    fs.chmodSync(inputDir, 0o777);
+  } catch {
+    /* ignore */
+  }
   mounts.push({
     hostPath: groupIpcDir,
     containerPath: '/workspace/ipc',
@@ -228,7 +238,14 @@ function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
 ): string[] {
-  const args: string[] = ['run', '-i', '--rm', '--name', containerName, '--cap-add=SYS_ADMIN'];
+  const args: string[] = [
+    'run',
+    '-i',
+    '--rm',
+    '--name',
+    containerName,
+    '--cap-add=SYS_ADMIN',
+  ];
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
